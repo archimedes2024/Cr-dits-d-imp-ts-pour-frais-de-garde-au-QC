@@ -1,4 +1,3 @@
-*.Rmd linguist-language=R
 ---
 title: "Analyse des crédits d'impôt pour frais de garde au Québec"
 author: "Heddier Soler"
