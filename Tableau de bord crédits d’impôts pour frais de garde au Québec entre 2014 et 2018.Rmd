@@ -1,0 +1,101 @@
+---
+title: "Tableau de bord sur les crédits d'impôts pour frais de garde au Québec entre 2014 et 2018"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(ggplot2)
+library(dplyr)
+library(shiny)
+
+
+setwd('C:/Users/a/Desktop/MAITRISE HEC/SESSION_HIVER_2024/LOGICIELS/Devoir R/Devoir R')
+frais_garde = read.csv('credit_frais_de_garde_denfants.csv')
+
+frais_garde$Age = factor(frais_garde$Age, levels=c('Moins de 30 ans', '30 à 34 ans', '35 à 39 ans', '40 à 44 ans', '45 à 49 ans', '50 ans et plus'))
+frais_garde = frais_garde %>% mutate(Avec_conjoint2 = ifelse(frais_garde$Avec_Conjoint == TRUE, 'Avec Conjoint', 'Sans Conjoint'))
+```
+
+## Column {.sidebar}
+
+![](C:/Users/a/Desktop/MAITRISE%20HEC/SESSION_HIVER_2024/LOGICIELS/Devoir%20R/Devoir%20R/revenu_quebec.png)
+
+Ce tableau de bord présente des statistiques intéressantes sur les crédits d'impôts pour frais de garde au Québec entre 2014 et 2018.Les données utilisées sont disponible sur le site [Données Québec](https://www.donneesquebec.ca/recherche/dataset/credit-d-impot-pour-frais-de-garde-d-enfants-2014-a-2020).
+
+```{r}
+selectInput("Region_administrative", label = "Région administrative",
+            choices = unique(frais_garde$Region_administrative), selected = unique(frais_garde$Region_administrative)[6])
+
+selectInput("Annee_imposition", label = "Année d'imposition",
+            choices = unique(frais_garde$Annee_imposition), selected = last(unique(frais_garde$Annee_imposition)))
+
+selectInput("Avec_Conjoint2", label = "État civil",
+            choices = unique(frais_garde$Avec_conjoint2), selected = unique(frais_garde$Avec_conjoint2[1]))
+```
+
+::: {style="position: absolute; bottom: 10px; left: 10px; width: 100%; text-align: left;"}
+<img src="C:/Users/a/Desktop/MAITRISE HEC/SESSION_HIVER_2024/LOGICIELS/Devoir R/Devoir R/logo_HEC.png" style="width: 80px;"/>
+:::
+
+## Row {data-width="150"}
+
+### Nombre de particuliers ayant bénéficié d'un crédit d'impôt
+
+```{r}
+total_particuliers = reactive({sum(frais_garde[(frais_garde$Region_administrative == input$Region_administrative) & (frais_garde$Annee_imposition == input$Annee_imposition) & (frais_garde$Avec_conjoint2 == input$Avec_Conjoint2),]$Nombre_de_particuliers)})
+renderValueBox({
+  valueBox(
+    value = total_particuliers(),
+    icon = "fa-users"
+  )
+})
+
+```
+
+### Nombre de femmes ayant bénéficié d'un crédit d'impôt
+
+```{r}
+total_particuliers_femmes = reactive({sum(frais_garde[(frais_garde$Region_administrative == input$Region_administrative) & (frais_garde$Annee_imposition == input$Annee_imposition) & (frais_garde$Avec_conjoint2 == input$Avec_Conjoint2) & (frais_garde$Genre == "Féminin"),]$Nombre_de_particuliers)})
+renderValueBox({
+  valueBox(
+    value = total_particuliers_femmes(),
+    icon = "fa-female",
+    color = "#F8766D"
+  )
+})
+
+```
+
+### Nombre d'hommes ayant bénéficié d'un crédit d'impôt
+
+```{r}
+total_particuliers_hommes = reactive({sum(frais_garde[(frais_garde$Region_administrative == input$Region_administrative) & (frais_garde$Annee_imposition == input$Annee_imposition) & (frais_garde$Avec_conjoint2 == input$Avec_Conjoint2) & (frais_garde$Genre == "Masculin"),]$Nombre_de_particuliers)})
+renderValueBox({
+  valueBox(
+    value = total_particuliers_hommes(),
+    icon = "fa-male",
+    color = "#00BFC4"
+  )
+})
+
+```
+
+## Row {data-width="650"}
+
+### Crédit moyen accordé aux bénéficiaires selon l'âge, le genre, l'état civil et la région administrative pour les années d’imposition 2014 à 2018
+
+```{r}
+frais_garde_interactif = reactive({frais_garde[(frais_garde$Region_administrative == input$Region_administrative) & (frais_garde$Annee_imposition == input$Annee_imposition) & (frais_garde$Avec_conjoint2 == input$Avec_Conjoint2),]})
+
+renderPlot({
+  ggplot(data = frais_garde_interactif()) +
+  geom_col(mapping = aes(x=Age, y=Credit_moyen, group=factor(Genre),fill=factor(Genre)),
+           position="dodge") + xlab("Strates d'âge") + ylab("Crédit moyen en $") +
+    labs(fill="Genre") + ylim(0,4000)
+})
+```
